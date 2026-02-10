@@ -70,8 +70,11 @@ python spyer.py
 
 If you're on Windows and prefer not to use the terminal:
 
-1. Right-click `install_windows.ps1` → **Run with PowerShell**
-2. After install, right-click `run_app.ps1` → **Run with PowerShell**
+1. Double-click **`INSTALL.bat`** — it handles Python, venv, and dependencies automatically
+2. After install, double-click **`run_app.bat`** to launch (created by the installer)
+3. You can move the entire folder anywhere afterward — it's fully portable
+
+> **Advanced:** If you prefer PowerShell, you can run `install_windows.ps1` instead.
 
 ---
 
@@ -141,8 +144,8 @@ For real-time trading, you can swap in:
 SPYer/
 ├── spyer.py                  # Main application
 ├── requirements.txt          # Python dependencies
-├── install_windows.ps1       # Windows auto-installer
-├── run_app.ps1               # Windows run helper
+├── INSTALL.bat               # Windows double-click installer
+├── install_windows.ps1       # Windows PowerShell installer (alternative)
 ├── LICENSE                   # MIT license
 └── README.md                 # This file
 ```
