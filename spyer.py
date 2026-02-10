@@ -20,7 +20,7 @@ from PyQt5.QtWidgets import (
     QLabel, QPushButton, QTextEdit, QGroupBox, QGridLayout, QCheckBox,
     QProgressBar, QFrame, QComboBox, QSpinBox, QSplitter, QScrollArea,
     QTabWidget, QSizePolicy, QTableWidget, QTableWidgetItem, QHeaderView,
-    QAbstractItemView,
+    QAbstractItemView, QDoubleSpinBox,
 )
 from PyQt5.QtCore import QTimer, Qt
 from PyQt5.QtGui import QFont, QColor
@@ -700,6 +700,87 @@ def evaluate_signal(df, signal_type, event_ctx=None):
 
 
 # ---------------------------------------------------------------------------
+# Support / Resistance detection
+# ---------------------------------------------------------------------------
+
+def find_support_resistance(df, n_touches=2, tolerance_pct=0.05):
+    """
+    Find support and resistance levels from price action.
+    Uses pivot highs/lows and clusters them within tolerance.
+    Returns list of (price, type, touches) tuples.
+    """
+    highs = df["High"].values
+    lows = df["Low"].values
+    closes = df["Close"].values
+
+    if len(highs) < 5:
+        return []
+
+    # Find local pivot highs and lows (3-bar pivots)
+    pivot_highs = []
+    pivot_lows = []
+    for i in range(2, len(highs) - 2):
+        if highs[i] >= highs[i-1] and highs[i] >= highs[i-2] and \
+           highs[i] >= highs[i+1] and highs[i] >= highs[i+2]:
+            pivot_highs.append(highs[i])
+        if lows[i] <= lows[i-1] and lows[i] <= lows[i-2] and \
+           lows[i] <= lows[i+1] and lows[i] <= lows[i+2]:
+            pivot_lows.append(lows[i])
+
+    # Cluster nearby pivots into levels
+    all_pivots = [(p, "resistance") for p in pivot_highs] + \
+                 [(p, "support") for p in pivot_lows]
+    if not all_pivots:
+        return []
+
+    all_pivots.sort(key=lambda x: x[0])
+    current_price = closes[-1]
+    price_range = max(highs) - min(lows) if max(highs) != min(lows) else 1
+    tol = price_range * tolerance_pct
+
+    levels = []
+    used = [False] * len(all_pivots)
+    for i, (price, ptype) in enumerate(all_pivots):
+        if used[i]:
+            continue
+        cluster = [price]
+        cluster_types = [ptype]
+        used[i] = True
+        for j in range(i + 1, len(all_pivots)):
+            if used[j]:
+                continue
+            if abs(all_pivots[j][0] - price) <= tol:
+                cluster.append(all_pivots[j][0])
+                cluster_types.append(all_pivots[j][1])
+                used[j] = True
+        if len(cluster) >= n_touches:
+            avg_price = sum(cluster) / len(cluster)
+            # Label based on where it is relative to current price
+            if avg_price > current_price:
+                level_type = "resistance"
+            else:
+                level_type = "support"
+            levels.append((avg_price, level_type, len(cluster)))
+
+    # Also add day high / low as key levels
+    day_high = max(highs)
+    day_low = min(lows)
+    # Check they aren't too close to existing levels
+    for lvl_price, _, _ in levels:
+        if abs(day_high - lvl_price) < tol:
+            day_high = None
+        if abs(day_low - lvl_price) < tol:
+            day_low = None
+    if day_high is not None:
+        levels.append((day_high, "resistance", 1))
+    if day_low is not None:
+        levels.append((day_low, "support", 1))
+
+    levels.sort(key=lambda x: x[0])
+    return levels
+
+
+# ---------------------------------------------------------------------------
 # Candlestick chart widget
 # ---------------------------------------------------------------------------
 
@@ -722,6 +803,56 @@ class CandlestickWidget(FigureCanvas):
             ax.spines["left"].set_color("#444")
         for ax in [self.ax_price, self.ax_vol, self.ax_rsi]:
             ax.tick_params(labelbottom=False)
+
+        # S/R state
+        self.show_auto_sr = True
+        self.manual_lines = []  # list of price floats
+        self._last_ylim = None
+
+        # Double-click to add manual line
+        self.mpl_connect("button_press_event", self._on_click)
+
+    def _on_click(self, event):
+        """Double-click on price panel to add a manual horizontal line."""
+        if event.dblclick and event.inaxes == self.ax_price and event.ydata is not None:
+            price = round(event.ydata, 2)
+            # If clicking near an existing manual line, remove it instead
+            for existing in self.manual_lines:
+                if self._last_ylim:
+                    rng = self._last_ylim[1] - self._last_ylim[0]
+                    if abs(existing - price) < rng * 0.01:
+                        self.manual_lines.remove(existing)
+                        self._redraw_lines()
+                        return
+            self.manual_lines.append(price)
+            self._redraw_lines()
+
+    def _redraw_lines(self):
+        """Redraw just the horizontal lines without full chart refresh."""
+        # Remove old manual line artists
+        to_remove = [l for l in self.ax_price.lines if getattr(l, '_is_manual_line', False)]
+        for l in to_remove:
+            l.remove()
+        # Draw manual lines
+        for price in self.manual_lines:
+            line = self.ax_price.axhline(price, color="#e040fb", linewidth=1.0,
+                                         linestyle="--", alpha=0.9)
+            line._is_manual_line = True
+            # Price label on right edge
+            self.ax_price.text(self.ax_price.get_xlim()[1], price, f" ${price:.2f}",
+                              fontsize=6, color="#e040fb", va="center",
+                              clip_on=True)
+        self.draw_idle()
+
+    def clear_manual_lines(self):
+        self.manual_lines.clear()
+
+    def add_manual_line(self, price):
+        if price not in self.manual_lines:
+            self.manual_lines.append(price)
+
+    def remove_manual_line(self, price):
+        self.manual_lines = [p for p in self.manual_lines if abs(p - price) > 0.005]
 
     def update_chart(self, full_df, n_bars=60):
         for ax in [self.ax_price, self.ax_vol, self.ax_rsi, self.ax_macd]:
@@ -764,6 +895,31 @@ class CandlestickWidget(FigureCanvas):
         self.ax_price.plot(x, ema9_vals, color="#42a5f5", linewidth=0.8, label="EMA 9", alpha=0.7)
         self.ax_price.plot(x, ema21_vals, color="#ab47bc", linewidth=0.8, label="EMA 21", alpha=0.7)
 
+        # --- Auto S/R levels ---
+        if self.show_auto_sr:
+            levels = find_support_resistance(full_df)
+            for price_level, level_type, touches in levels:
+                if level_type == "resistance":
+                    color = "#ef5350"
+                    label_prefix = "R"
+                else:
+                    color = "#26a69a"
+                    label_prefix = "S"
+                self.ax_price.axhline(price_level, color=color, linewidth=0.7,
+                                      linestyle=":", alpha=0.6)
+                self.ax_price.text(len(x) - 1, price_level,
+                                  f" {label_prefix} ${price_level:.2f} ({touches}x)",
+                                  fontsize=5.5, color=color, va="bottom" if level_type == "resistance" else "top",
+                                  alpha=0.8, clip_on=True)
+
+        # --- Manual lines ---
+        for mprice in self.manual_lines:
+            line = self.ax_price.axhline(mprice, color="#e040fb", linewidth=1.0,
+                                         linestyle="--", alpha=0.9)
+            line._is_manual_line = True
+            self.ax_price.text(len(x) - 1, mprice, f" ${mprice:.2f}",
+                              fontsize=6, color="#e040fb", va="center", clip_on=True)
+
         vcol = [colors_up + "55" if c >= o else colors_dn + "55" for o, c in zip(opens, closes)]
         self.ax_vol.bar(x, volumes, width=0.5, color=vcol)
         self.ax_vol.set_ylim(0, volumes.max() * 4 if volumes.max() > 0 else 1)
@@ -774,6 +930,9 @@ class CandlestickWidget(FigureCanvas):
         self.ax_price.yaxis.set_major_formatter(mticker.FormatStrFormatter("$%.2f"))
         self.ax_price.legend(loc="upper left", fontsize=7, facecolor="#1e1e1e",
                              edgecolor="#444", labelcolor="#ccc")
+
+        # Store ylim for click proximity detection
+        self._last_ylim = self.ax_price.get_ylim()
 
         rsi_full = compute_rsi(full_close, 14)
         rsi_vals = rsi_full.iloc[-n_bars:].values
@@ -927,6 +1086,49 @@ class SPYderScalpApp(QMainWindow):
         price_row.addStretch()
         left_layout.addLayout(price_row)
 
+        # S/R controls row
+        sr_row = QHBoxLayout()
+        sr_row.setSpacing(6)
+        self.cb_auto_sr = QCheckBox("S/R Levels")
+        self.cb_auto_sr.setChecked(True)
+        self.cb_auto_sr.setFont(QFont("Arial", 8))
+        self.cb_auto_sr.stateChanged.connect(self._toggle_auto_sr)
+        sr_row.addWidget(self.cb_auto_sr)
+
+        sr_row.addWidget(QLabel("|"))
+
+        lbl_add = QLabel("Add line $")
+        lbl_add.setFont(QFont("Arial", 8))
+        sr_row.addWidget(lbl_add)
+        self.spin_manual_price = QDoubleSpinBox()
+        self.spin_manual_price.setRange(0, 9999)
+        self.spin_manual_price.setDecimals(2)
+        self.spin_manual_price.setSingleStep(0.50)
+        self.spin_manual_price.setValue(0)
+        self.spin_manual_price.setFixedWidth(80)
+        self.spin_manual_price.setFont(QFont("Arial", 8))
+        sr_row.addWidget(self.spin_manual_price)
+
+        btn_add_line = QPushButton("+")
+        btn_add_line.setFixedWidth(24)
+        btn_add_line.setStyleSheet("background:#e040fb;color:white;border-radius:2px;font-weight:bold;")
+        btn_add_line.clicked.connect(self._add_manual_line)
+        sr_row.addWidget(btn_add_line)
+
+        btn_clear = QPushButton("Clear Lines")
+        btn_clear.setFont(QFont("Arial", 8))
+        btn_clear.setStyleSheet("background:#555;color:white;padding:2px 8px;border-radius:2px;")
+        btn_clear.clicked.connect(self._clear_manual_lines)
+        sr_row.addWidget(btn_clear)
+
+        hint = QLabel("(dbl-click chart to add/remove)")
+        hint.setFont(QFont("Arial", 7))
+        hint.setStyleSheet("color:#666;")
+        sr_row.addWidget(hint)
+
+        sr_row.addStretch()
+        left_layout.addLayout(sr_row)
+
         self.candle_chart = CandlestickWidget(self)
         self.candle_chart.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         left_layout.addWidget(self.candle_chart, stretch=1)
@@ -1027,6 +1229,21 @@ class SPYderScalpApp(QMainWindow):
         splitter.addWidget(right_widget)
         splitter.setSizes([820, 540])
         outer.addWidget(splitter, stretch=1)
+
+    # -----------------------------------------------------------------------
+    # S/R line controls
+    # -----------------------------------------------------------------------
+    def _toggle_auto_sr(self, state):
+        self.candle_chart.show_auto_sr = bool(state)
+
+    def _add_manual_line(self):
+        price = self.spin_manual_price.value()
+        if price > 0:
+            self.candle_chart.add_manual_line(price)
+            self.spin_manual_price.setValue(0)
+
+    def _clear_manual_lines(self):
+        self.candle_chart.clear_manual_lines()
 
     # -----------------------------------------------------------------------
     # Controls
