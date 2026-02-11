@@ -76,13 +76,13 @@ THEME = {
     "blue": "#42a5f5", "purple": "#ab47bc", "pink": "#e040fb", "orange": "#e65100",
     "grade_ap": "#00c853", "grade_a": "#2e7d32", "grade_b": "#558b2f",
     "grade_c": "#f9a825", "grade_d": "#e65100", "grade_f": "#c62828",
-    "btn_start": "background:#4CAF50;color:white;padding:4px 12px;border-radius:3px;",
-    "btn_stop": "background:#f44336;color:white;padding:4px 12px;border-radius:3px;",
-    "btn_scan": "background:#2196F3;color:white;padding:4px 12px;border-radius:3px;",
-    "btn_scanner": "background:#9C27B0;color:white;padding:4px 12px;border-radius:3px;",
-    "btn_small": "background:#555;color:white;padding:2px 8px;border-radius:2px;",
-    "btn_active_tf": "background:#2196F3;color:white;border-radius:2px;padding:1px 3px;",
-    "btn_inactive_tf": "background:#333;color:#aaa;border-radius:2px;padding:1px 3px;",
+    "btn_start": "background:#333;color:#5eb8a2;border:1px solid #555;padding:4px 12px;border-radius:3px;",
+    "btn_stop": "background:#333;color:#cf7b78;border:1px solid #555;padding:4px 12px;border-radius:3px;",
+    "btn_scan": "background:#333;color:#7ba7c9;border:1px solid #555;padding:4px 12px;border-radius:3px;",
+    "btn_scanner": "background:#333;color:#a48bbf;border:1px solid #555;padding:4px 12px;border-radius:3px;",
+    "btn_small": "background:#333;color:#999;border:1px solid #555;padding:2px 8px;border-radius:2px;",
+    "btn_active_tf": "background:#444;color:#bbb;border:1px solid #666;border-radius:2px;padding:1px 3px;",
+    "btn_inactive_tf": "background:#2a2a2a;color:#666;border:1px solid #444;border-radius:2px;padding:1px 3px;",
     "tab_content": "background:#1a1a2e; color:#ccc; border:1px solid #333;",
 }
 
@@ -1575,7 +1575,7 @@ class CandlestickWidget(FigureCanvas):
     def remove_manual_line(self, price):
         self.manual_lines = [p for p in self.manual_lines if abs(p - price) > 0.005]
 
-    def update_chart(self, full_df, n_bars=60):
+    def update_chart(self, full_df, n_bars=15):
         for ax in [self.ax_price, self.ax_vol, self.ax_rsi, self.ax_macd]:
             ax.cla()
             ax.set_facecolor("#1e1e1e")
@@ -1775,6 +1775,11 @@ class SPYderScalpApp(QMainWindow):
             self._update_events(event_ctx)
         except Exception:
             pass
+        # Inline scanner: refresh every 5 minutes, initial scan after 3s
+        self.scanner_timer = QTimer()
+        self.scanner_timer.timeout.connect(self._run_inline_scanner)
+        self.scanner_timer.start(300000)  # 5 min
+        QTimer.singleShot(3000, self._run_inline_scanner)
 
     def _build_ui(self):
         root = QWidget()
@@ -1791,23 +1796,23 @@ class SPYderScalpApp(QMainWindow):
         top_bar.addWidget(title)
 
         self.btn_start = QPushButton("Start")
-        self.btn_start.setStyleSheet("background:#4CAF50;color:white;padding:4px 12px;border-radius:3px;")
+        self.btn_start.setStyleSheet("background:#333;color:#5eb8a2;border:1px solid #555;padding:4px 12px;border-radius:3px;")
         self.btn_start.clicked.connect(self.start_monitoring)
         top_bar.addWidget(self.btn_start)
 
         self.btn_stop = QPushButton("Stop")
-        self.btn_stop.setStyleSheet("background:#f44336;color:white;padding:4px 12px;border-radius:3px;")
+        self.btn_stop.setStyleSheet("background:#333;color:#cf7b78;border:1px solid #555;padding:4px 12px;border-radius:3px;")
         self.btn_stop.clicked.connect(self.stop_monitoring)
         self.btn_stop.setEnabled(False)
         top_bar.addWidget(self.btn_stop)
 
         self.btn_scan = QPushButton("Scan Now")
-        self.btn_scan.setStyleSheet("background:#2196F3;color:white;padding:4px 12px;border-radius:3px;")
+        self.btn_scan.setStyleSheet("background:#333;color:#7ba7c9;border:1px solid #555;padding:4px 12px;border-radius:3px;")
         self.btn_scan.clicked.connect(self.manual_scan)
         top_bar.addWidget(self.btn_scan)
 
-        self.btn_scanner = QPushButton("Value Scanner")
-        self.btn_scanner.setStyleSheet("background:#9C27B0;color:white;padding:4px 12px;border-radius:3px;")
+        self.btn_scanner = QPushButton("Scan Options")
+        self.btn_scanner.setStyleSheet("background:#333;color:#a48bbf;border:1px solid #555;padding:4px 12px;border-radius:3px;")
         self.btn_scanner.clicked.connect(self._open_scanner)
         top_bar.addWidget(self.btn_scanner)
 
@@ -1903,7 +1908,7 @@ class SPYderScalpApp(QMainWindow):
 
         btn_clear = QPushButton("Clear Lines")
         btn_clear.setFont(QFont("Arial", 8))
-        btn_clear.setStyleSheet("background:#555;color:white;padding:2px 8px;border-radius:2px;")
+        btn_clear.setStyleSheet("background:#333;color:#999;border:1px solid #555;padding:2px 8px;border-radius:2px;")
         btn_clear.clicked.connect(self._clear_manual_lines)
         sr_row.addWidget(btn_clear)
 
@@ -1946,9 +1951,9 @@ class SPYderScalpApp(QMainWindow):
             btn.setCursor(Qt.PointingHandCursor)
             is_active = (tf_label == "1m")
             if is_active:
-                btn.setStyleSheet("background:#2196F3;color:white;border-radius:2px;padding:1px 3px;")
+                btn.setStyleSheet("background:#444;color:#bbb;border:1px solid #666;border-radius:2px;padding:1px 3px;")
             else:
-                btn.setStyleSheet("background:#333;color:#aaa;border-radius:2px;padding:1px 3px;")
+                btn.setStyleSheet("background:#2a2a2a;color:#666;border:1px solid #444;border-radius:2px;padding:1px 3px;")
             btn.clicked.connect(lambda checked, t=tf_label: self._set_chart_timeframe(t))
             tf_row.addWidget(btn)
             self._chart_tf_buttons[tf_label] = btn
@@ -2088,12 +2093,12 @@ class SPYderScalpApp(QMainWindow):
         hist_top.addStretch()
         btn_export_csv = QPushButton("Export CSV")
         btn_export_csv.setFont(QFont("Arial", 7))
-        btn_export_csv.setStyleSheet("background:#2196F3;color:white;padding:2px 8px;border-radius:2px;")
+        btn_export_csv.setStyleSheet("background:#333;color:#7ba7c9;border:1px solid #555;padding:2px 8px;border-radius:2px;")
         btn_export_csv.clicked.connect(self._export_history_csv)
         hist_top.addWidget(btn_export_csv)
         btn_clear_hist = QPushButton("Clear History")
         btn_clear_hist.setFont(QFont("Arial", 7))
-        btn_clear_hist.setStyleSheet("background:#555;color:white;padding:2px 8px;border-radius:2px;")
+        btn_clear_hist.setStyleSheet("background:#333;color:#999;border:1px solid #555;padding:2px 8px;border-radius:2px;")
         btn_clear_hist.clicked.connect(self._clear_history)
         hist_top.addWidget(btn_clear_hist)
         hist_layout.addLayout(hist_top)
@@ -2122,7 +2127,7 @@ class SPYderScalpApp(QMainWindow):
         log_top.addStretch()
         btn_clear_log = QPushButton("Clear Log")
         btn_clear_log.setFont(QFont("Arial", 7))
-        btn_clear_log.setStyleSheet("background:#555;color:white;padding:2px 8px;border-radius:2px;")
+        btn_clear_log.setStyleSheet("background:#333;color:#999;border:1px solid #555;padding:2px 8px;border-radius:2px;")
         btn_clear_log.clicked.connect(self._clear_log)
         log_top.addWidget(btn_clear_log)
         log_layout.addLayout(log_top)
@@ -2146,6 +2151,45 @@ class SPYderScalpApp(QMainWindow):
         left_widget.setMinimumWidth(400)
         right_widget.setMinimumWidth(280)
         outer.addWidget(splitter, stretch=1)
+
+        # --- Bottom: Inline Value Scanner ---
+        scanner_box = QGroupBox("Top Options (Value Scanner)")
+        scanner_box.setFont(QFont("Arial", 9, QFont.Bold))
+        scanner_box.setStyleSheet("QGroupBox{color:#aaa;border:1px solid #333;border-radius:3px;margin-top:4px;padding-top:10px;}")
+        scanner_box.setMaximumHeight(240)
+        scanner_lay = QVBoxLayout(scanner_box)
+        scanner_lay.setContentsMargins(4, 2, 4, 2)
+        scanner_lay.setSpacing(1)
+
+        self.scanner_table = QTableWidget()
+        self.scanner_table.setColumnCount(9)
+        self.scanner_table.setHorizontalHeaderLabels(
+            ["Type", "Strike", "DTE", "Bid", "Ask", "Mid", "Vol", "Score", "Signals"])
+        self.scanner_table.setFont(QFont("Consolas", 9))
+        self.scanner_table.setStyleSheet(
+            "QTableWidget{background:#1a1a2e;color:#ccc;border:none;gridline-color:#333;}"
+            "QHeaderView::section{background:#252540;color:#aaa;border:1px solid #333;padding:2px;font-size:9px;}"
+            "QTableWidget::item:selected{background:#333;}")
+        self.scanner_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.scanner_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.scanner_table.verticalHeader().setVisible(False)
+        self.scanner_table.horizontalHeader().setStretchLastSection(True)
+        self.scanner_table.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.scanner_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        # Size columns
+        hdr = self.scanner_table.horizontalHeader()
+        for i in range(8):
+            hdr.setSectionResizeMode(i, QHeaderView.ResizeToContents)
+        hdr.setSectionResizeMode(8, QHeaderView.Stretch)
+        self.scanner_table.setRowCount(0)
+        scanner_lay.addWidget(self.scanner_table)
+
+        self.lbl_scanner_status = QLabel("Scanner: idle")
+        self.lbl_scanner_status.setFont(QFont("Arial", 8))
+        self.lbl_scanner_status.setStyleSheet("color:#666;")
+        scanner_lay.addWidget(self.lbl_scanner_status)
+
+        outer.addWidget(scanner_box)
 
     # -----------------------------------------------------------------------
     # S/R line controls
@@ -2240,9 +2284,9 @@ class SPYderScalpApp(QMainWindow):
         # Update button styles
         for label, btn in self._chart_tf_buttons.items():
             if label == tf:
-                btn.setStyleSheet("background:#2196F3;color:white;border-radius:2px;padding:1px 3px;")
+                btn.setStyleSheet("background:#444;color:#bbb;border:1px solid #666;border-radius:2px;padding:1px 3px;")
             else:
-                btn.setStyleSheet("background:#333;color:#aaa;border-radius:2px;padding:1px 3px;")
+                btn.setStyleSheet("background:#2a2a2a;color:#666;border:1px solid #444;border-radius:2px;padding:1px 3px;")
         # Fetch and display chart data for selected timeframe
         self._refresh_chart_for_timeframe()
 
@@ -2251,12 +2295,12 @@ class SPYderScalpApp(QMainWindow):
         tf = self._chart_tf
         # Map timeframe label to yfinance params
         tf_map = {
-            "1m":  {"period": "1d",  "interval": "1m",  "bars": 60},
-            "5m":  {"period": "5d",  "interval": "5m",  "bars": 60},
-            "10m": {"period": "5d",  "interval": "15m", "bars": 48},  # yf has no 10m; use 15m as closest
-            "15m": {"period": "5d",  "interval": "15m", "bars": 48},
-            "1h":  {"period": "1mo", "interval": "1h",  "bars": 60},
-            "1d":  {"period": "6mo", "interval": "1d",  "bars": 120},
+            "1m":  {"period": "1d",  "interval": "1m",  "bars": 15},
+            "5m":  {"period": "5d",  "interval": "5m",  "bars": 30},
+            "10m": {"period": "5d",  "interval": "15m", "bars": 30},  # yf has no 10m; use 15m as closest
+            "15m": {"period": "5d",  "interval": "15m", "bars": 30},
+            "1h":  {"period": "1mo", "interval": "1h",  "bars": 40},
+            "1d":  {"period": "6mo", "interval": "1d",  "bars": 90},
         }
         params = tf_map.get(tf, tf_map["1m"])
         try:
@@ -2318,7 +2362,7 @@ class SPYderScalpApp(QMainWindow):
                 df, data_mode = self._fetch_data()
                 if df is not None and not df.empty:
                     df = self._calc_vwap(df)
-                    self.candle_chart.update_chart(df, n_bars=60)
+                    self.candle_chart.update_chart(df, n_bars=15)
                     self.candle_chart.repaint()
                     current_price = float(df["Close"].iloc[-1])
                     self.lbl_price.setText(f"SPY ${current_price:.2f}")
@@ -2453,7 +2497,7 @@ class SPYderScalpApp(QMainWindow):
                 df["_macd_signal"] = macd_s
                 df["_macd_hist"] = macd_h
 
-            self.candle_chart.update_chart(df, n_bars=60)
+            self.candle_chart.update_chart(df, n_bars=15)
             # Only refresh for non-1m timeframe if selected (don't redraw twice)
             if hasattr(self, '_chart_tf') and self._chart_tf != "1m":
                 self._refresh_chart_for_timeframe()
@@ -2487,6 +2531,7 @@ class SPYderScalpApp(QMainWindow):
 
             vol_threshold = self.spin_vol.value() / 100.0
             signal_type = None
+            gated = False  # True if conditions are close but didn't pass all gates
 
             # Determine signal direction - require multiple confirmations
             price_above_vwap = current_price > current_vwap
@@ -2514,26 +2559,45 @@ class SPYderScalpApp(QMainWindow):
                 if ema9_confirms_put or macd_confirms_put:
                     signal_type = "PUT"
 
-            # Log why no signal (helps debug)
+            # If no full signal, still determine a direction for display
             if signal_type is None:
-                reasons = []
-                if not price_above_vwap and not price_below_vwap:
-                    reasons.append(f"price = VWAP (${current_price:.2f})")
-                elif price_above_vwap and not self.cb_calls.isChecked():
-                    reasons.append("price > VWAP but Calls unchecked")
-                elif price_below_vwap and not self.cb_puts.isChecked():
-                    reasons.append("price < VWAP but Puts unchecked")
-                if not vol_ok:
-                    reasons.append(f"vol {vol_ratio:.2f}x < threshold {vol_threshold:.2f}x")
-                if not vwap_clear:
-                    reasons.append(f"too close to VWAP ({vwap_distance_pct:.3f}%)")
-                if price_above_vwap and not ema9_confirms_call and not macd_confirms_call:
-                    reasons.append("no EMA/MACD confirmation for CALL")
-                if price_below_vwap and not ema9_confirms_put and not macd_confirms_put:
-                    reasons.append("no EMA/MACD confirmation for PUT")
-                direction = "above" if price_above_vwap else "below"
-                diff = abs(current_price - current_vwap)
-                self._log(f"    No signal: ${current_price:.2f} ({direction} VWAP by ${diff:.2f}) | vol {vol_ratio:.2f}x | {', '.join(reasons)}")
+                gate_reasons = []
+                # Figure out which direction price leans
+                if price_above_vwap and self.cb_calls.isChecked():
+                    signal_type = "CALL"
+                    gated = True
+                    if not vol_ok:
+                        gate_reasons.append(f"vol {vol_ratio:.2f}x < {vol_threshold:.2f}x threshold")
+                    if not vwap_clear:
+                        gate_reasons.append(f"too close to VWAP ({vwap_distance_pct:.3f}%)")
+                    if not ema9_confirms_call and not macd_confirms_call:
+                        gate_reasons.append("no EMA/MACD confirmation")
+                elif price_below_vwap and self.cb_puts.isChecked():
+                    signal_type = "PUT"
+                    gated = True
+                    if not vol_ok:
+                        gate_reasons.append(f"vol {vol_ratio:.2f}x < {vol_threshold:.2f}x threshold")
+                    if not vwap_clear:
+                        gate_reasons.append(f"too close to VWAP ({vwap_distance_pct:.3f}%)")
+                    if not ema9_confirms_put and not macd_confirms_put:
+                        gate_reasons.append("no EMA/MACD confirmation")
+                else:
+                    # Price at VWAP or direction unchecked — truly no signal
+                    reasons = []
+                    if not price_above_vwap and not price_below_vwap:
+                        reasons.append(f"price = VWAP (${current_price:.2f})")
+                    elif price_above_vwap and not self.cb_calls.isChecked():
+                        reasons.append("price > VWAP but Calls unchecked")
+                    elif price_below_vwap and not self.cb_puts.isChecked():
+                        reasons.append("price < VWAP but Puts unchecked")
+                    direction = "above" if price_above_vwap else "below"
+                    diff = abs(current_price - current_vwap)
+                    self._log(f"    No signal: ${current_price:.2f} ({direction} VWAP by ${diff:.2f}) | vol {vol_ratio:.2f}x | {', '.join(reasons)}")
+
+                if gated:
+                    direction = "above" if price_above_vwap else "below"
+                    diff = abs(current_price - current_vwap)
+                    self._log(f"    Weak {signal_type}: ${current_price:.2f} ({direction} VWAP by ${diff:.2f}) | vol {vol_ratio:.2f}x | gates: {', '.join(gate_reasons)}")
 
             if signal_type:
                 event_ctx = get_event_context(now_et())
@@ -2559,6 +2623,7 @@ class SPYderScalpApp(QMainWindow):
                     for r in mtf_reasons:
                         self._log(f"      {r}")
 
+                # Always show the evaluation in the UI
                 self._update_gauge(signal_type, result)
                 self._update_events(event_ctx)
 
@@ -2569,11 +2634,25 @@ class SPYderScalpApp(QMainWindow):
                 self._update_dte_display(dte_rec)
                 rec_dte = dte_rec["recommended_dte"]
 
+                hold = estimate_hold_time(signal_type, result["score"], rec_dte,
+                                          result["vol_ratio"], result["rsi"], event_ctx)
+                self._update_hold_display(hold)
+
+                # If gated (didn't pass all confirmation gates), show info but don't alert
+                if gated:
+                    self.lbl_signal.setText(f"{signal_type} {result['grade']} (watching)")
+                    self.lbl_signal.setStyleSheet(f"color:#888;")
+                    # Add gate reasons to breakdown
+                    gate_note = "\n\n  [!] NOT CONFIRMED:\n" + "\n".join(f"    - {r}" for r in gate_reasons)
+                    current_bd = self.lbl_breakdown.toPlainText()
+                    self.lbl_breakdown.setPlainText(current_bd + gate_note)
+                    # Still track prediction but don't alert
+                    self._record_prediction(signal_type, current_price, result["score"],
+                                            result["grade"], hold.get("hold_minutes", 15))
+                    return
+
                 if result["score"] < self._min_grade_score():
                     self.lbl_signal.setText(f"{signal_type} signal (below min grade - skipped)")
-                    hold = estimate_hold_time(signal_type, result["score"], rec_dte,
-                                              result["vol_ratio"], result["rsi"], event_ctx)
-                    self._update_hold_display(hold)
                     return
 
                 # Cooldown check
@@ -2594,20 +2673,9 @@ class SPYderScalpApp(QMainWindow):
                 self.last_signal_type = signal_type
                 self._trigger_alert(signal_type, current_price, current_vwap, vol_ratio, result, event_ctx, dte_rec)
             else:
-                self.lbl_signal.setText("No signal")
+                # Truly no direction — price at VWAP or direction unchecked
+                self.lbl_signal.setText("Waiting for signal")
                 self.lbl_signal.setStyleSheet("color:#888;")
-                self.lbl_grade.setText("")
-                self.lbl_arrow.setText("")
-                self.lbl_arrow.setStyleSheet("")
-                self.quality_bar.setValue(0)
-                self.lbl_breakdown.setPlainText("")
-                self.lbl_hold_time.setText("Hold: --")
-                self.lbl_exit_by.setText("")
-                self.lbl_hold_confidence.setText("")
-                self.lbl_hold_reasons.setPlainText("")
-                self.lbl_dte_rec.setText("DTE: --")
-                self.lbl_dte_rec.setStyleSheet("color:#888;")
-                self.lbl_dte_detail.setText("")
                 event_ctx = get_event_context(now_et())
                 self._update_events(event_ctx)
 
@@ -2662,7 +2730,6 @@ class SPYderScalpApp(QMainWindow):
                     if status != "unavailable":
                         bd_lines.append(f"       {tf}: {status}")
         self.lbl_breakdown.setPlainText("\n".join(bd_lines))
-        self.tabs.setCurrentIndex(0)
 
     def _update_events(self, event_ctx):
         today_events = event_ctx.get("events_today", [])
@@ -3031,9 +3098,76 @@ class SPYderScalpApp(QMainWindow):
         gc.collect()
 
     def _open_scanner(self):
-        self._scanner_win = OptionsValueScanner()
-        self._scanner_win.show()
-        self._scanner_win.run_scan()
+        """Refresh the inline value scanner panel."""
+        self._run_inline_scanner()
+
+    def _run_inline_scanner(self):
+        """Scan options and populate the bottom panel."""
+        self.lbl_scanner_status.setText("Scanner: scanning...")
+        self.lbl_scanner_status.setStyleSheet("color:#ffab00;")
+        QApplication.processEvents()
+        try:
+            # Get current SPY price
+            df = yf_download_safe("SPY", period="1d", interval="1m")
+            if df is None or df.empty:
+                self.lbl_scanner_status.setText("Scanner: no price data")
+                self.lbl_scanner_status.setStyleSheet("color:#ef5350;")
+                return
+            spy_price = float(df["Close"].iloc[-1])
+
+            results = scan_options_value(spy_price, expirations_to_scan=3)
+            if not results:
+                self.scanner_table.setRowCount(0)
+                self.lbl_scanner_status.setText("Scanner: no opportunities found")
+                self.lbl_scanner_status.setStyleSheet("color:#888;")
+                return
+
+            # Populate table with all results (top 5 visible without scrolling)
+            self.scanner_table.setRowCount(len(results))
+            for i, opp in enumerate(results):
+                type_item = QTableWidgetItem(opp["type"])
+                type_color = QColor("#5eb8a2") if opp["type"] == "CALL" else QColor("#cf7b78")
+                type_item.setForeground(type_color)
+
+                strike_item = QTableWidgetItem(f"${opp['strike']:.0f}")
+                dte_item = QTableWidgetItem(f"{opp['dte']}d")
+                bid_item = QTableWidgetItem(f"${opp['bid']:.2f}")
+                ask_item = QTableWidgetItem(f"${opp['ask']:.2f}")
+                mid_item = QTableWidgetItem(f"${opp['mid']:.2f}")
+                vol_item = QTableWidgetItem(f"{opp['volume']}")
+                score_item = QTableWidgetItem(f"{opp['score']:.0f}")
+
+                # Color score
+                sc = opp["score"]
+                if sc >= 30:
+                    score_item.setForeground(QColor("#5eb8a2"))
+                elif sc >= 20:
+                    score_item.setForeground(QColor("#ffab00"))
+                else:
+                    score_item.setForeground(QColor("#888"))
+
+                signals_text = ", ".join(opp.get("signals", []))
+                signals_item = QTableWidgetItem(signals_text)
+                signals_item.setForeground(QColor("#aaa"))
+
+                self.scanner_table.setItem(i, 0, type_item)
+                self.scanner_table.setItem(i, 1, strike_item)
+                self.scanner_table.setItem(i, 2, dte_item)
+                self.scanner_table.setItem(i, 3, bid_item)
+                self.scanner_table.setItem(i, 4, ask_item)
+                self.scanner_table.setItem(i, 5, mid_item)
+                self.scanner_table.setItem(i, 6, vol_item)
+                self.scanner_table.setItem(i, 7, score_item)
+                self.scanner_table.setItem(i, 8, signals_item)
+
+            et = now_et()
+            self.lbl_scanner_status.setText(
+                f"Scanner: {len(results)} opportunities | top score: {results[0]['score']:.0f} | {et.strftime('%I:%M %p ET')}")
+            self.lbl_scanner_status.setStyleSheet("color:#5eb8a2;")
+
+        except Exception as e:
+            self.lbl_scanner_status.setText(f"Scanner: error - {e}")
+            self.lbl_scanner_status.setStyleSheet("color:#ef5350;")
 
     # -------------------------------------------------------------------
     # Prediction tracking
@@ -3041,6 +3175,17 @@ class SPYderScalpApp(QMainWindow):
     def _record_prediction(self, signal_type, price, score, grade, hold_minutes):
         """Record a signal as a prediction to track."""
         et = now_et()
+
+        # Dedup: don't record if same direction prediction was recorded < 5 min ago and still pending
+        if self.prediction_history:
+            last = self.prediction_history[-1]
+            if (last["signal"] == signal_type
+                    and last["result"] in (None, "PENDING")
+                    and isinstance(last.get("timestamp"), datetime)):
+                age_seconds = (et - last["timestamp"]).total_seconds()
+                if age_seconds < 300:  # 5 min dedup window
+                    return last  # still tracking the previous one
+
         pred = {
             "time": et.strftime("%I:%M %p"),
             "timestamp": et,
@@ -3051,7 +3196,7 @@ class SPYderScalpApp(QMainWindow):
             "hold_minutes": hold_minutes,
             "check_time": et + timedelta(minutes=hold_minutes),
             "exit_price": None,
-            "result": None,  # "WIN", "LOSS", "FLAT", "PENDING"
+            "result": None,
             "pnl_pct": None,
         }
         self.prediction_history.append(pred)
@@ -3061,13 +3206,20 @@ class SPYderScalpApp(QMainWindow):
 
     def _check_prediction_outcomes(self):
         """Called by timer - checks if any pending predictions have reached their exit time."""
+        # Always refresh display so countdowns update
+        has_pending = any(p["result"] in (None, "PENDING") for p in self.prediction_history)
+        if has_pending:
+            self._update_history_display()
+
         if not market_is_open():
             return  # Don't fetch when market is closed
 
         et = now_et()
         # Find all predictions that need checking
         pending = [p for p in self.prediction_history
-                   if (p["result"] is None or p["result"] == "PENDING") and et >= p["check_time"]]
+                   if (p["result"] is None or p["result"] == "PENDING")
+                   and isinstance(p.get("check_time"), datetime)
+                   and et >= p["check_time"]]
         if not pending:
             return
 
@@ -3134,9 +3286,10 @@ class SPYderScalpApp(QMainWindow):
 
     def _update_history_display(self):
         """Refresh the History tab with all tracked predictions."""
+        et = now_et()
         lines = []
-        lines.append(f"{'TIME':<10} {'SIG':<5} {'GRADE':<6} {'ENTRY':>8} {'EXIT':>8} {'P&L':>7} {'RESULT':<7}")
-        lines.append("-" * 60)
+        lines.append(f"{'TIME':<10} {'SIG':<5} {'GRADE':<6} {'ENTRY':>8} {'EXIT':>8} {'P&L':>7} {'RESULT'}")
+        lines.append("-" * 65)
         for pred in reversed(self.prediction_history):
             t = pred["time"]
             sig = pred["signal"]
@@ -3153,6 +3306,16 @@ class SPYderScalpApp(QMainWindow):
                 marker = "[~]"
             else:
                 marker = "[...]"
+                # Add countdown for pending predictions
+                check_time = pred.get("check_time")
+                if isinstance(check_time, datetime):
+                    remaining = (check_time - et).total_seconds()
+                    if remaining > 0:
+                        mins = int(remaining // 60)
+                        secs = int(remaining % 60)
+                        marker = f"[{mins}:{secs:02d}]"
+                    else:
+                        marker = "[checking]"
             lines.append(f"{t:<10} {sig:<5} {grade:<6} {entry:>8} {ex:>8} {pnl:>7} {marker} {result}")
 
         # Summary at bottom
@@ -3606,7 +3769,7 @@ class OptionsValueScanner(QMainWindow):
         header.addWidget(self.lbl_status)
 
         self.btn_refresh = QPushButton("Rescan")
-        self.btn_refresh.setStyleSheet("background:#2196F3;color:white;padding:4px 14px;border-radius:3px;")
+        self.btn_refresh.setStyleSheet("background:#333;color:#7ba7c9;border:1px solid #555;padding:4px 14px;border-radius:3px;")
         self.btn_refresh.clicked.connect(self.run_scan)
         header.addWidget(self.btn_refresh)
         layout.addLayout(header)

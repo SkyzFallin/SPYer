@@ -1,4 +1,4 @@
-# SPYderScalp v5.0
+# SPYderScalp v5.1
 
 <p align="center">
   <img src="sf.jpg" width="200" alt="SPYderScalp">
@@ -6,9 +6,9 @@
 
 **Built by: SkyzFallin**
 
-**Real-time SPY intraday options signal monitor with multi-indicator quality scoring, multi-timeframe confirmation, prediction tracking, options value scanner, DTE recommendations, economic calendar awareness, and hold-time estimates.**
+**Real-time SPY intraday options signal monitor with multi-indicator quality scoring, multi-timeframe confirmation, prediction tracking, inline options value scanner, DTE recommendations, economic calendar awareness, and hold-time estimates.**
 
-SPYderScalp watches SPY price action and alerts you when conditions line up for a potential 0-2 DTE options trade -- then tells you *how good* the signal is with a quality score from 0-100 and a letter grade (A+ to F), explains *why* it gave that rating in plain English, recommends *which DTE to trade* based on time of day and conditions, tells you *how long to hold* based on momentum and upcoming economic events, tracks *prediction accuracy* over time, and can scan the options chain for *mispriced contracts*.
+SPYderScalp watches SPY price action and alerts you when conditions line up for a potential 0-2 DTE options trade -- then tells you *how good* the signal is with a quality score from 0-100 and a letter grade (A+ to F), explains *why* it gave that rating in plain English, recommends *which DTE to trade* based on time of day and conditions, tells you *how long to hold* based on momentum and upcoming economic events, tracks *prediction accuracy* over time with persistent history, and scans the options chain for the *best value contracts* right in the main window.
 
 ![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
@@ -18,12 +18,14 @@ SPYderScalp watches SPY price action and alerts you when conditions line up for 
 
 ## Features
 
-- **Side-by-side layout** -- chart on the left, signals on the right, optimized for 1366x768+ displays
+- **Side-by-side layout** -- chart on the left, signals on the right, options scanner at the bottom
 - **Live candlestick chart** with VWAP, EMA 9/21, Bollinger Bands, VWAP bands, RSI subplot, and MACD subplot
+- **15-candle default view** -- large, readable candles on the 1-minute timeframe
 - **Multi-timeframe chart** -- switch between 1m, 5m, 15m, 1h, and 1d views
 - **Auto support/resistance levels** -- detected from price action, drawn on the chart
 - **Manual price lines** -- add custom levels to the chart at any price
 - **Signal quality scoring** (0-100) across 12 weighted indicators
+- **Always-on evaluation** -- shows signal direction, grade, and breakdown even when not all confirmation gates are met (labeled "watching"), so the UI is never blank
 - **Multi-timeframe confirmation** -- cross-references 1m signals against 5m and 15m trends for higher confidence
 - **RSI divergence detection** -- spots bullish/bearish divergences for early reversal signals
 - **Bollinger Band squeeze detection** -- identifies low-volatility compression before breakouts
@@ -31,19 +33,20 @@ SPYderScalp watches SPY price action and alerts you when conditions line up for 
 - **Plain-English explanations** -- every signal tells you exactly why it got that grade
 - **DTE recommender** -- suggests 0, 1, or 2 DTE based on time of day, signal strength, volume, RSI, and event proximity
 - **Hold-time recommendations** -- how long to hold based on DTE, momentum, events, and time of day
-- **Prediction tracking** -- logs every signal, checks the outcome, and rates accuracy over time with CSV export
-- **Open/Close swing forecast** -- predicts today's direction using 3 months of historical daily data
-- **Options value scanner** -- separate window that scans for mispriced contracts, IV discounts, intrinsic edges, and unusual activity
-- **Economic calendar** -- built-in calendar of CPI, FOMC, NFP, PPI, GDP, Retail Sales, and Jobless Claims for 2025-2026 with countdown timers
+- **Prediction tracking with persistence** -- logs every signal, checks the outcome with countdown timers, rates accuracy over time, and saves history across sessions
+- **Open/Close swing forecast** -- predicts today's direction using 3 months of historical daily data with day-of-week breakdown, last 5 sessions, and volatility stats
+- **Inline options value scanner** -- scans for the best value contracts and displays the top results in a table at the bottom of the main window, auto-refreshes every 5 minutes
+- **Economic calendar** -- built-in calendar of CPI, FOMC, NFP, PPI, GDP, Retail Sales, and Jobless Claims for 2025-2026 with countdown timers, populated immediately on startup
 - **Event-aware scoring** -- signals near major releases get automatically downgraded
 - **Intraday volatility zones** -- warns during market open surge, lunch lull, power hour
 - **Eastern Time aware** -- all market logic uses ET regardless of your local timezone
 - **Market hours auto-stop** -- monitoring pauses automatically at market close, resumes at open
-- **Tabbed interface** -- Signal breakdown, Hold reasons, History, Calendar, and Log in separate tabs
+- **Tabbed interface** -- Signal breakdown, Hold reasons, History, Calendar, and Log (stays on your selected tab)
 - **Status indicator** -- live dot shows monitoring/stopped/scanning state
 - Recommended 0-2 DTE option strikes
 - Desktop notifications + sound alerts
 - Configurable volume threshold and minimum grade filter
+- Platform-aware data directory with crash logging
 - Works on **Windows, macOS, and Linux**
 
 ---
@@ -69,6 +72,14 @@ Every signal is evaluated across 12 indicators, each weighted for a total score 
 
 Signals are then cross-referenced against 5-minute and 15-minute timeframes for **multi-timeframe confirmation**. When all timeframes agree, the signal score gets a boost; conflicting timeframes reduce confidence.
 
+### Signal Modes
+
+| Mode | What It Means |
+|------|--------------|
+| **CALL/PUT Signal** | All confirmation gates passed -- full alert with notification |
+| **CALL/PUT (watching)** | Direction detected but not all gates met (e.g. low volume) -- evaluation shown, no alert |
+| **Waiting for signal** | Price at VWAP or direction unchecked -- no evaluation possible |
+
 ### Grade Scale
 
 | Grade | Score | Meaning |
@@ -80,48 +91,42 @@ Signals are then cross-referenced against 5-minute and 15-minute timeframes for 
 | D | 35-49 | Weak signal, most indicators not confirming |
 | F | 0-34 | Noise -- skip it |
 
-### Example Signal Explanation
-
-```
-WHY THIS GRADE:
-  Strong bullish setup. Multiple indicators aligned,
-  giving high confidence in the trade.
-
-  [OK] VWAP: Price $0.87 above VWAP - clear break,
-       bullish institutional flow confirmed.
-  [OK] Volume: 2.3x avg - strong participation,
-       real buying/selling pressure behind this move.
-  [~] RSI: 67 - healthy bullish momentum but approaching overbought.
-  [X] Trend: EMAs weakly aligned. The trend is present but not strong.
-  [OK] MACD: Bullish crossover confirmed with rising histogram.
-  [OK] RSI divergence: Bullish divergence detected (75%).
-  [OK] No imminent economic events - clear window to trade.
-```
-
 ---
 
 ## Prediction Tracking
 
-Every signal is automatically logged in the **History** tab with:
+Every evaluated signal is automatically logged in the **History** tab with:
 - Signal type, grade, score, and price at signal time
-- Outcome check after hold period expires
-- Win/loss determination with P&L percentage
-- Running accuracy stats (win rate, average return)
+- **Countdown timer** showing time remaining until outcome check
+- Outcome determination after hold period expires (WIN / LOSS / FLAT)
+- Running accuracy stats (win rate, average return, grade breakdown)
+- **Persistent across sessions** -- history saves to disk and loads on next launch
 - **CSV export** for offline analysis
-
-The tracker summary shows your session stats in the top status bar.
 
 ---
 
 ## Open/Close Swing Forecast
 
-On startup, SPYderScalp fetches 3 months of daily SPY data and predicts today's direction based on:
-- Day-of-week historical bias (e.g. "Tuesdays tend up: avg +0.12%")
-- Last 5 days momentum
-- 20-day trend direction
-- Mean reversion after big moves
+On startup, SPYderScalp fetches 3 months of daily SPY data and displays a detailed forecast:
 
-The forecast shows below the signal area with a direction and confidence percentage.
+- **20-day overview** -- avg open-to-close, range, volatility, up/down ratio, best/worst day
+- **Day-of-week breakdown** -- historical average and green rate for each weekday
+- **Last 5 sessions** -- date, direction, open-to-close %, and range for recent context
+- **Signal analysis** -- day-of-week bias, recent momentum, 20-day trend, mean reversion, streak detection, range contraction, gap analysis
+- **Direction prediction** with confidence percentage
+
+---
+
+## Inline Options Value Scanner
+
+The bottom panel scans SPY option chains and displays opportunities in a sortable table:
+
+- **Auto-scans on launch** and refreshes every 5 minutes
+- **"Scan Options" button** for immediate refresh
+- Shows: Type, Strike, DTE, Bid, Ask, Mid, Volume, Score, and Signals
+- Top 5 visible without scrolling, full results accessible by scrolling
+- Scores color-coded by strength (teal = strong, amber = moderate, grey = weak)
+- Checks for: intrinsic edge, Black-Scholes model discount, IV discount, spread value, volume spikes, liquidity, penny contracts
 
 ---
 
@@ -138,24 +143,6 @@ SPYderScalp tells you whether to trade 0, 1, or 2 DTE options based on current c
 | **Events** | No events near | Event in 30-60 min | Major event imminent |
 | **Day of week** | Mon-Thu morning | Friday afternoon | -- |
 
-The recommendation shows as `Rec: 0DTE` with a score comparison like `0DTE:85 | 1DTE:60 | 2DTE:30` so you can see how close the call was.
-
----
-
-## Options Value Scanner
-
-Click **Value Scanner** (purple button) to open a separate window that scans SPY option chains for opportunities:
-
-- **Intrinsic edge** -- midpoint priced below intrinsic value
-- **Model discount** -- ask price below Black-Scholes theoretical fair value
-- **IV discount** -- implied volatility lower than neighboring strikes
-- **Spread value** -- wide bid-ask where last trade filled well below midpoint
-- **Volume spike** -- unusual volume relative to open interest
-- **Liquidity value** -- tight spread + high volume = easy fills
-- **Penny contracts** -- near-the-money OTM contracts at $0.01-0.05
-
-Each opportunity gets a composite score. Click any row for a detailed breakdown with a limit order suggestion.
-
 ---
 
 ## Hold-Time Recommendations
@@ -171,19 +158,12 @@ Every signal includes a suggested hold duration and exit time (in Eastern Time):
 | **Event proximity** | Exits before upcoming CPI/FOMC/NFP releases |
 | **Time of day** | Caps hold time near market close (ET) |
 
-```
-HOLD: ~22 min  |  Exit by 10:47 AM ET  |  Confidence: HIGH
-    * 1DTE -> base 30 min hold
-    * A signal -> extended to 39 min
-    * [!] CPI Report in 35 min -> exit before event (hold 22 min)
-```
-
 ---
 
 ## Chart Features
 
 The live candlestick chart includes:
-- **Candlesticks** with green/red bodies and wicks
+- **15 large candles** by default on 1m (readable wicks and bodies)
 - **VWAP line** (gold) with optional VWAP standard deviation bands
 - **EMA 9** (blue) and **EMA 21** (purple) overlays
 - **Bollinger Bands** (toggleable)
@@ -198,7 +178,7 @@ The live candlestick chart includes:
 
 ## Economic Calendar
 
-Built-in calendar of every major US economic event for 2025-2026:
+Built-in calendar of every major US economic event for 2025-2026. Populated immediately on startup:
 
 - **FOMC Decisions** -- all 8 meetings per year
 - **CPI / PPI Reports** -- monthly releases
@@ -206,8 +186,6 @@ Built-in calendar of every major US economic event for 2025-2026:
 - **GDP Reports** -- quarterly (advance, second estimate, final)
 - **Retail Sales** -- monthly consumer spending data
 - **Initial Jobless Claims** -- every Thursday at 8:30 AM ET
-
-The Calendar tab shows today's events with countdown timers and the next 14 days of upcoming releases.
 
 ---
 
@@ -235,15 +213,17 @@ python spyer.py
 ### Windows One-Click Setup
 
 Just double-click **`SPYderScalp.bat`** -- it handles everything:
-- First run: finds Python, creates venv, installs deps, launches (~1 min)
+- Checks for Python 3.9+ (won't silently fail on older versions)
+- First run: creates venv, installs deps from requirements.txt, launches (~1 min)
 - After that: launches in seconds
 - Fully portable -- move the folder anywhere
 
 ### macOS One-Click Setup
 
 Double-click **`SPYderScalp.command`** -- same idea as the Windows launcher:
-- First run: finds Python 3.9+, creates venv, installs deps, launches (~1 min)
+- Checks for Python 3.9+, creates venv, installs deps from requirements.txt
 - After that: launches in seconds and closes the Terminal window automatically
+- Crash output logged to `crash.log` for debugging
 
 > **Note:** On first run macOS may ask you to allow the script. Right-click -> Open if double-click is blocked by Gatekeeper.
 
@@ -258,8 +238,6 @@ pip install -r requirements.txt
 python spyer.py
 ```
 
-macOS uses the built-in `afplay` command for sound alerts (Glass.aiff). Timezone handling uses `zoneinfo` which is included in Python 3.9+ -- no extra dependencies needed beyond what's in requirements.txt.
-
 ---
 
 ## Usage
@@ -267,22 +245,23 @@ macOS uses the built-in `afplay` command for sound alerts (Glass.aiff). Timezone
 1. Launch the app
 2. Monitoring starts automatically during market hours (9:30 AM - 4:00 PM ET)
 3. Or click **Scan Now** for an immediate check anytime
-4. When a signal fires you'll see:
+4. The signal area always shows the current evaluation:
    - Signal type (CALL / PUT) with quality score and letter grade
+   - "watching" label if not all gates are met, full alert when confirmed
    - Multi-timeframe confirmation status
-   - DTE recommendation (0, 1, or 2 DTE with reasoning)
-   - Plain-English explanation of the rating
-   - Candlestick chart with RSI, MACD, S/R levels
-   - Hold-time recommendation with exit time in ET
-   - Recommended option strikes
-5. Click **Value Scanner** to find mispriced options contracts
+   - DTE recommendation and hold-time with exit time in ET
+5. Click **Scan Options** to refresh the inline value scanner
 6. Use tabs on the right panel: Signal, Hold, History, Calendar, Log
+7. History tab shows prediction tracking with countdown timers
 
-### Top Bar Settings
+### Top Bar Controls
 
+- **Start / Stop** -- control monitoring (auto-starts on launch during market hours)
+- **Scan Now** -- trigger an immediate signal check
+- **Scan Options** -- refresh the inline options value scanner
 - **Calls / Puts** -- toggle which directions you want alerts for
-- **Min** -- minimum grade to trigger alerts (default: C)
-- **Vol** -- volume ratio required to trigger (default: 150% = 1.5x average)
+- **Min** -- minimum grade to trigger full alerts (default: C)
+- **Vol** -- volume ratio required for full confirmation (default: 150% = 1.5x average)
 
 ### Chart Controls
 
@@ -291,6 +270,19 @@ macOS uses the built-in `afplay` command for sound alerts (Glass.aiff). Timezone
 - **VWAP±** checkbox -- toggle VWAP standard deviation bands
 - **Add Line** -- add a manual price line at any level
 - **Timeframe buttons** -- switch chart between 1m, 5m, 15m, 1h, 1d
+
+---
+
+## Data Storage
+
+App data is stored in platform-appropriate locations:
+- **Windows:** `%APPDATA%\SPYderScalp\`
+- **macOS:** `~/Library/Application Support/SPYderScalp/`
+- **Linux:** `~/.local/share/SPYderScalp/`
+
+Files stored: `settings.json`, `prediction_history.json`, `crash.log`
+
+On first run, settings are automatically migrated from the old `~/.spyderscalp_settings.json` location if it exists.
 
 ---
 
@@ -310,6 +302,7 @@ SPYderScalp/
   SPYderScalp.command        # macOS smart launcher (double-click to run)
   install_windows.ps1       # Windows PowerShell installer (alternative)
   requirements.txt          # Python dependencies
+  .gitignore                # Git ignore rules
   LICENSE                   # MIT license
   README.md                 # This file
 ```
@@ -320,8 +313,10 @@ SPYderScalp/
 
 - [x] Multi-indicator signal scoring (12 weighted indicators)
 - [x] Multi-timeframe confirmation (5m + 15m cross-reference)
+- [x] Always-on signal evaluation (watching mode)
 - [x] Candlestick chart with RSI & MACD
 - [x] Multi-timeframe chart views (1m, 5m, 15m, 1h, 1d)
+- [x] Large candle default view (15 bars)
 - [x] Auto support/resistance levels
 - [x] Bollinger Bands & VWAP bands overlays
 - [x] RSI divergence detection
@@ -330,13 +325,14 @@ SPYderScalp/
 - [x] Economic calendar (2025-2026)
 - [x] Hold-time recommendations
 - [x] Plain-English signal explanations
-- [x] Side-by-side layout for laptops
+- [x] Side-by-side layout
 - [x] Eastern Time awareness + market hours auto-stop
 - [x] DTE recommender (0/1/2 DTE)
-- [x] Options value scanner (mispriced contracts)
-- [x] Prediction tracking with accuracy stats
-- [x] Open/Close swing forecast
+- [x] Inline options value scanner
+- [x] Prediction tracking with persistence and countdown timers
+- [x] Open/Close swing forecast with detailed stats
 - [x] CSV export of prediction history
+- [x] Platform-aware data storage with crash logging
 - [ ] Real-time data source integration
 - [ ] Auto-trade via broker API (Tradier, IBKR)
 
