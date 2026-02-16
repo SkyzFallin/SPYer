@@ -1,7 +1,7 @@
 # SPYderScalp v5.1
 
 <p align="center">
-  <img src="sf.jpg" width="200" alt="SPYderScalp">
+  <img src="ss.jpg" width="200" alt="SPYderScalp">
 </p>
 
 **Built by: SkyzFallin**
