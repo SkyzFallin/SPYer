@@ -11,7 +11,7 @@
 SPYderScalp watches SPY price action and alerts you when conditions line up for a potential 0-2 DTE options trade -- then tells you *how good* the signal is with a quality score from 0-100 and a letter grade (A+ to F), explains *why* it gave that rating in plain English, recommends *which DTE to trade* based on time of day and conditions, tells you *how long to hold* based on momentum and upcoming economic events, tracks *prediction accuracy* over time with persistent history, and scans the options chain for the *best value contracts* right in the main window.
 
 ![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue)
-![License: MIT](https://img.shields.io/badge/license-MIT-green)
+![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue)
 ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey)
 
 ---
@@ -297,13 +297,13 @@ All market-sensitive logic runs in **US Eastern Time** regardless of your local 
 ```
 SPYderScalp/
   spyer.py                  # Main app (signals, chart, calendar, scanner, UI)
-  sf.jpg                    # App logo
+      ss.jpg                    # App logo
   SPYderScalp.bat           # Windows smart launcher (double-click to run)
   SPYderScalp.command        # macOS smart launcher (double-click to run)
   install_windows.ps1       # Windows PowerShell installer (alternative)
   requirements.txt          # Python dependencies
   .gitignore                # Git ignore rules
-  LICENSE                   # MIT license
+  LICENSE                   # GPL-3.0 license
   README.md                 # This file
 ```
 
@@ -346,4 +346,4 @@ This app provides **alerts only**, not financial advice. Always verify signals b
 
 ## License
 
-MIT -- see [LICENSE](LICENSE).
+GPL-3.0 -- see [LICENSE](LICENSE).
