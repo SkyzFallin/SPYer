@@ -5,9 +5,9 @@ This audit is focused on practical improvements you can make in this repository 
 ## What was added in this PR
 
 1. **CI workflow** (`.github/workflows/ci.yml`)
-   - Runs Ruff lint checks.
+   - Runs Ruff lint checks in non-blocking mode (signal without blocking merges while legacy code is cleaned up).
    - Runs a Python compile smoke test.
-   - Runs `pip-audit` to catch vulnerable dependencies.
+   - Runs `pip-audit` in non-blocking mode for vulnerability visibility.
 
 2. **CodeQL workflow** (`.github/workflows/codeql.yml`)
    - Adds static security analysis for Python.
